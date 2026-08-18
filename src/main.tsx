@@ -36,6 +36,7 @@ const Icon = ({ name, size = 20 }: { name: string; size?: number }) => {
     plus: <path d="M12 5v14M5 12h14"/>,
     image: <><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-5-5L5 20"/></>,
     phone: <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2Z"/>,
+    download: <><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></>,
     menu: <path d="M4 7h16M4 12h16M4 17h16"/>,
   }
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{paths[name]}</svg>
@@ -115,6 +116,26 @@ function App() {
     reader.readAsDataURL(file)
   }
 
+  const exportPublishPackage = () => {
+    const payload = {
+      schemaVersion: 1,
+      site: '杭州市丹枫实验小学丹枫少年宫',
+      exportedAt: new Date().toISOString(),
+      instructions: '请将此文件发给 Codex，用于更新 GitHub Pages 公开网站。',
+      clubs,
+      signupQr,
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `danfeng-clubs-publish-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
   const renderClubDetail = (club: Club, extraClass = '') => <article className={`club-detail ${extraClass}`.trim()} style={{ '--club': categoryTheme(club.category).color } as React.CSSProperties}>
     <div className="detail-cover" style={{ backgroundColor: categoryTheme(club.category).fallback, backgroundImage: `linear-gradient(180deg, ${categoryTheme(club.category).tint.replace('.52', '.12').replace('.54', '.14')} 0%, transparent 42%, ${categoryTheme(club.category).tint} 100%), url(${club.photos[0] || art(club.name, categoryTheme(club.category).color, categoryTheme(club.category).fallback)})` }}><span>{club.category}</span><button onClick={() => setEditing({ ...club, photos: [...club.photos] })}><Icon name="edit" size={16}/>编辑资料</button><div><h2>{club.name}</h2></div></div>
     <div className="fact-grid"><div><Icon name="user"/><span><small>面向年级</small><b>{club.grades}</b></span></div><div><Icon name="clock"/><span><small>上课时间</small><b>{club.time}</b></span></div><div><Icon name="pin"/><span><small>上课地点</small><b>{club.place}</b></span></div><div><Icon name="user"/><span><small>校内管理老师</small><b>{club.teacher}</b></span></div><div><Icon name="phone"/><span><small>联系电话</small><b>{club.phone || '待补充'}</b></span></div></div>
@@ -189,6 +210,7 @@ function App() {
         <div className="photo-editor"><div><b>社团活动照片</b><small>最多 8 张，第 1 张将作为封面图。图片会保存在当前浏览器中。</small></div><label className="upload"><Icon name="image"/>上传照片<input type="file" accept="image/*" multiple onChange={upload}/></label></div>
         <div className="photo-strip">{editing.photos.map((photo, index) => <div key={`${photo.slice(-16)}${index}`}><img src={photo} alt=""/><button type="button" onClick={() => setEditing({...editing, photos: editing.photos.filter((_, i) => i !== index)})}><Icon name="close" size={15}/></button></div>)}</div>
         <div className="signup-editor"><div><b>报名二维码</b><small>用于页面底部的扫码报名区域，建议上传正方形图片。</small></div>{signupQr && <img src={signupQr} alt="当前报名二维码"/>}<label className="upload"><Icon name="image"/>{signupQr ? '替换图片' : '上传图片'}<input type="file" accept="image/*" onChange={uploadSignupQr}/></label>{signupQr && <button type="button" className="remove-qr" onClick={() => setSignupQr('')}>移除</button>}</div>
+        <div className="publish-export"><span className="publish-export-icon"><Icon name="download" size={24}/></span><div><b>完成编辑后，导出发布包</b><small>文件会包含全部社团资料、照片和报名二维码。导出后将 JSON 文件发给 Codex 即可发布。</small></div><button type="button" onClick={exportPublishPackage}><Icon name="download" size={17}/>导出发布包</button></div>
         <div className="editor-actions">
           {clubs.some(c => c.id === editing.id) && <button type="button" className="delete" onClick={() => { if (confirm('确定删除这个社团吗？')) { const next = clubs.filter(c => c.id !== editing.id); setClubs(next); setSelectedId(next[0]?.id || ''); setEditing(null) } }}>删除社团</button>}
           <button type="button" className="new" onClick={() => setEditing(emptyClub())}><Icon name="plus" size={17}/>新增社团</button><button type="submit" className="save">保存并发布</button>
