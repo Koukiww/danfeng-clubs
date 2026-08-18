@@ -58,8 +58,10 @@ const starterClubs: Club[] = [
 const storageKey = 'senyu-school-clubs-v1'
 const signupQrKey = 'danfeng-signup-qr-v1'
 const clubCategories = ['文艺中心', '体健中心', '科创中心'] as const
+const gradeOptions = ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级'] as const
 const categoryMap: Record<string, string> = { '艺术创作': '文艺中心', '音乐表演': '文艺中心', '体育运动': '体健中心', '科学探索': '科创中心', '文艺中心': '文艺中心', '体健中心': '体健中心', '科创中心': '科创中心' }
-const normalizeClub = (club: Club): Club => ({ ...club, phone: club.phone || '', category: categoryMap[club.category] || '文艺中心' })
+const normalizeGrades = (value = '') => { const matched = gradeOptions.filter(grade => value.includes(grade)); return (matched.length ? matched : gradeOptions).join('、') }
+const normalizeClub = (club: Club): Club => ({ ...club, phone: club.phone || '', grades: normalizeGrades(club.grades), category: categoryMap[club.category] || '文艺中心' })
 const emptyClub = (): Club => ({ id: crypto.randomUUID(), name: '', english: '', category: '文艺中心', grades: '', time: '', place: '', teacher: '', phone: '', summary: '', description: '', color: '#397c6b', photos: [] })
 const categoryTheme = (category: string) => category === '文艺中心'
   ? { color: '#c76f3f', tint: 'rgba(184, 84, 36, .52)', fallback: '#e2a06b' }
@@ -74,13 +76,14 @@ function App() {
   const [selectedId, setSelectedId] = useState(clubs[0]?.id || '')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('全部社团')
+  const [gradeFilter, setGradeFilter] = useState('全部年级')
   const [editing, setEditing] = useState<Club | null>(null)
   const [signupQr, setSignupQr] = useState(() => localStorage.getItem(signupQrKey) || '')
   const [mobileNav, setMobileNav] = useState(false)
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
   const selected = clubs.find(club => club.id === selectedId) || clubs[0]
   const categories = ['全部社团', ...clubCategories]
-  const filtered = useMemo(() => clubs.filter(club => (category === '全部社团' || club.category === category) && `${club.name}${club.description}`.toLowerCase().includes(query.toLowerCase())), [clubs, query, category])
+  const filtered = useMemo(() => clubs.filter(club => (category === '全部社团' || club.category === category) && (gradeFilter === '全部年级' || club.grades.includes(gradeFilter)) && `${club.name}${club.description}`.toLowerCase().includes(query.toLowerCase())), [clubs, query, category, gradeFilter])
 
   useEffect(() => { localStorage.setItem(storageKey, JSON.stringify(clubs)) }, [clubs])
   useEffect(() => { signupQr ? localStorage.setItem(signupQrKey, signupQr) : localStorage.removeItem(signupQrKey) }, [signupQr])
@@ -89,6 +92,7 @@ function App() {
   const saveClub = (event: FormEvent) => {
     event.preventDefault()
     if (!editing) return
+    if (!editing.grades) return alert('请至少选择一个适合年级')
     setClubs(current => current.some(c => c.id === editing.id) ? current.map(c => c.id === editing.id ? editing : c) : [...current, editing])
     setSelectedId(editing.id)
     setEditing(null)
@@ -145,7 +149,7 @@ function App() {
       <section className="club-section" id="clubs">
         <div className="section-heading"><div><p className="kicker">EXPLORE CLUBS</p><h2>探索校园社团</h2></div><p>从科学到艺术，从运动到公益<br/>找到最适合你的那一个。</p></div>
         <div className="toolbar">
-          <div className="category-tabs">{categories.map(item => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div>
+          <div className="filter-groups"><div className="category-tabs">{categories.map(item => <button key={item} className={category === item ? 'active' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div><div className="grade-tabs">{['全部年级', ...gradeOptions].map(item => <button key={item} className={gradeFilter === item ? 'active' : ''} onClick={() => setGradeFilter(item)}>{item}</button>)}</div></div>
           <label className="search"><Icon name="search" size={18}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="搜索社团..."/></label>
         </div>
 
@@ -174,7 +178,7 @@ function App() {
         <div className="form-grid">
           <label><span>社团名称</span><input required value={editing.name} onChange={e => setEditing({...editing, name: e.target.value})}/></label>
           <label><span>社团分类</span><select required value={editing.category} onChange={e => setEditing({...editing, category: e.target.value})}>{clubCategories.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
-          <label><span>面向年级</span><input required value={editing.grades} onChange={e => setEditing({...editing, grades: e.target.value})}/></label>
+          <fieldset className="grade-picker"><legend>面向年级（可多选）</legend>{gradeOptions.map(grade => { const checked = editing.grades.split('、').includes(grade); return <label key={grade} className={checked ? 'checked' : ''}><input type="checkbox" checked={checked} onChange={() => { const current = editing.grades.split('、').filter(Boolean); const next = checked ? current.filter(item => item !== grade) : [...current, grade]; setEditing({...editing, grades: gradeOptions.filter(item => next.includes(item)).join('、')}) }}/><span>{grade}</span></label> })}</fieldset>
           <label><span>上课时间</span><input required value={editing.time} onChange={e => setEditing({...editing, time: e.target.value})}/></label>
           <label><span>上课地点</span><input required value={editing.place} onChange={e => setEditing({...editing, place: e.target.value})}/></label>
           <label><span>校内管理老师</span><input required value={editing.teacher} onChange={e => setEditing({...editing, teacher: e.target.value})}/></label>
