@@ -4,6 +4,7 @@ import './styles.css'
 import ScrollExpand from './ScrollExpand'
 import MaskedHeading from './MaskedHeading'
 import AccordionGallery from './AccordionGallery'
+import Grainient from './Grainient'
 
 type Club = {
   id: string
@@ -128,7 +129,7 @@ function App() {
         </div>
       </section>
 
-      <section className="join" id="join"><p className="kicker">START YOUR JOURNEY</p><h2>准备好开始你的<br/>社团旅程了吗？</h2><p>记下喜欢的社团，请扫码报名吧。</p><div className={`signup-qr${signupQr ? ' has-image' : ''}`}>{signupQr ? <img src={signupQr} alt="社团报名二维码"/> : <span><Icon name="image" size={24}/><b>报名二维码</b><small>待资料统一发布</small></span>}</div><a href="#clubs">回到社团导览 <Icon name="arrow" size={17}/></a></section>
+      <section className="join" id="join"><Grainient className="join-grainient"/><div className="join-content"><p className="kicker">START YOUR JOURNEY</p><h2>准备好开始你的<br/>社团旅程了吗？</h2><p>记下喜欢的社团，请扫码报名吧。</p><div className={`signup-qr${signupQr ? ' has-image' : ''}`}>{signupQr ? <img src={signupQr} alt="社团报名二维码"/> : <span><Icon name="image" size={24}/><b>报名二维码</b><small>待资料统一发布</small></span>}</div><a href="#clubs">回到社团导览 <Icon name="arrow" size={17}/></a></div></section>
     </main>
 
     {mobileDetailOpen && selected && <div className="mobile-detail-overlay" role="dialog" aria-modal="true" aria-label={`${selected.name}详情`}><button className="mobile-detail-close" onClick={() => setMobileDetailOpen(false)}><Icon name="close"/>返回社团列表</button>{renderClubDetail(selected, 'mobile-club-detail')}</div>}
