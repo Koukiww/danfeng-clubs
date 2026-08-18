@@ -77,6 +77,7 @@ function App() {
   const [editing, setEditing] = useState<Club | null>(null)
   const [signupQr, setSignupQr] = useState(() => localStorage.getItem(signupQrKey) || '')
   const [mobileNav, setMobileNav] = useState(false)
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
   const selected = clubs.find(club => club.id === selectedId) || clubs[0]
   const categories = ['全部社团', ...clubCategories]
   const filtered = useMemo(() => clubs.filter(club => (category === '全部社团' || club.category === category) && `${club.name}${club.description}`.toLowerCase().includes(query.toLowerCase())), [clubs, query, category])
@@ -110,6 +111,14 @@ function App() {
     reader.readAsDataURL(file)
   }
 
+  const renderClubDetail = (club: Club, extraClass = '') => <article className={`club-detail ${extraClass}`.trim()} style={{ '--club': categoryTheme(club.category).color } as React.CSSProperties}>
+    <div className="detail-cover" style={{ backgroundColor: categoryTheme(club.category).fallback, backgroundImage: `linear-gradient(180deg, ${categoryTheme(club.category).tint.replace('.52', '.12').replace('.54', '.14')} 0%, transparent 42%, ${categoryTheme(club.category).tint} 100%), url(${club.photos[0] || art(club.name, categoryTheme(club.category).color, categoryTheme(club.category).fallback)})` }}><span>{club.category}</span><button onClick={() => setEditing({ ...club, photos: [...club.photos] })}><Icon name="edit" size={16}/>编辑资料</button><div><h2>{club.name}</h2></div></div>
+    <div className="fact-grid"><div><Icon name="user"/><span><small>面向年级</small><b>{club.grades}</b></span></div><div><Icon name="clock"/><span><small>上课时间</small><b>{club.time}</b></span></div><div><Icon name="pin"/><span><small>上课地点</small><b>{club.place}</b></span></div><div><Icon name="user"/><span><small>校内管理老师</small><b>{club.teacher}</b></span></div><div><Icon name="phone"/><span><small>联系电话</small><b>{club.phone || '待补充'}</b></span></div></div>
+    <div className="story"><p className="kicker">ABOUT THE CLUB</p><h3>关于我们</h3><p>{club.description}</p></div>
+    <div className="gallery-heading"><div><p className="kicker">CLUB MOMENTS</p><h3>社团瞬间</h3></div><span>{club.photos.length} 张照片</span></div>
+    <div className="gallery-accordion"><AccordionGallery items={club.photos.map((photo, index) => ({ image: photo, alt: `${club.name}活动照片 ${index + 1}` }))} defaultIndex={Math.min(1, club.photos.length - 1)} accentColor={categoryTheme(club.category).fallback}/></div>
+  </article>
+
   return <div className="site-shell">
     <header className="topbar">
       <a className="brand" href="#top" aria-label="返回首页"><img className="brand-mark" src={schoolLogoImage} alt="杭州市丹枫实验小学校徽"/><span className="brand-copy"><strong>杭州市丹枫实验小学</strong><small>Hangzhou Danfeng Experimental Primary School</small></span></a>
@@ -142,30 +151,20 @@ function App() {
 
         <div className="club-layout">
           <div className="club-list">
-            {filtered.map((club, index) => <button key={club.id} className={`club-card ${selected?.id === club.id ? 'selected' : ''}`} onClick={() => setSelectedId(club.id)} style={{ '--club': club.color } as React.CSSProperties}>
+            {filtered.map((club, index) => <button key={club.id} className={`club-card ${selected?.id === club.id ? 'selected' : ''}`} onClick={() => { setSelectedId(club.id); setMobileDetailOpen(true) }} style={{ '--club': club.color } as React.CSSProperties}>
               <div className="card-number">{String(index + 1).padStart(2, '0')}</div><div className="card-copy"><span>{club.category}</span><h3>{club.name}</h3><p>{club.description}</p></div><div className="card-arrow"><Icon name="arrow"/></div>
             </button>)}
             {!filtered.length && <div className="empty-result">没有找到符合条件的社团，试试其他关键词吧。</div>}
           </div>
 
-          {selected && <article className="club-detail" style={{ '--club': categoryTheme(selected.category).color } as React.CSSProperties}>
-            <div className="detail-cover" style={{ backgroundColor: categoryTheme(selected.category).fallback, backgroundImage: `linear-gradient(180deg, ${categoryTheme(selected.category).tint.replace('.52', '.12').replace('.54', '.14')} 0%, transparent 42%, ${categoryTheme(selected.category).tint} 100%), url(${selected.photos[0] || art(selected.name, categoryTheme(selected.category).color, categoryTheme(selected.category).fallback)})` }}><span>{selected.category}</span><button onClick={() => setEditing({ ...selected, photos: [...selected.photos] })}><Icon name="edit" size={16}/>编辑资料</button><div><h2>{selected.name}</h2></div></div>
-            <div className="fact-grid">
-              <div><Icon name="user"/><span><small>面向年级</small><b>{selected.grades}</b></span></div>
-              <div><Icon name="clock"/><span><small>上课时间</small><b>{selected.time}</b></span></div>
-              <div><Icon name="pin"/><span><small>上课地点</small><b>{selected.place}</b></span></div>
-              <div><Icon name="user"/><span><small>校内管理老师</small><b>{selected.teacher}</b></span></div>
-              <div><Icon name="phone"/><span><small>联系电话</small><b>{selected.phone || '待补充'}</b></span></div>
-            </div>
-            <div className="story"><p className="kicker">ABOUT THE CLUB</p><h3>关于我们</h3><p>{selected.description}</p></div>
-            <div className="gallery-heading"><div><p className="kicker">CLUB MOMENTS</p><h3>社团瞬间</h3></div><span>{selected.photos.length} 张照片</span></div>
-            <div className="gallery-accordion"><AccordionGallery items={selected.photos.map((photo, index) => ({ image: photo, alt: `${selected.name}活动照片 ${index + 1}` }))} defaultIndex={Math.min(1, selected.photos.length - 1)} accentColor={categoryTheme(selected.category).fallback}/></div>
-          </article>}
+          {selected && renderClubDetail(selected, 'desktop-club-detail')}
         </div>
       </section>
 
       <section className="join" id="join"><p className="kicker">START YOUR JOURNEY</p><h2>准备好开始你的<br/>社团旅程了吗？</h2><p>记下喜欢的社团，请扫码报名吧。</p><div className={`signup-qr${signupQr ? ' has-image' : ''}`}>{signupQr ? <img src={signupQr} alt="社团报名二维码"/> : <span><Icon name="image" size={24}/><b>报名二维码</b><small>请在内容管理中上传</small></span>}</div><a href="#clubs">回到社团导览 <Icon name="arrow" size={17}/></a></section>
     </main>
+
+    {mobileDetailOpen && selected && <div className="mobile-detail-overlay" role="dialog" aria-modal="true" aria-label={`${selected.name}详情`}><button className="mobile-detail-close" onClick={() => setMobileDetailOpen(false)}><Icon name="close"/>返回社团列表</button>{renderClubDetail(selected, 'mobile-club-detail')}</div>}
 
     <footer><div className="brand"><img className="brand-mark" src={schoolLogoImage} alt=""/><span className="brand-copy"><strong>杭州市丹枫实验小学</strong><small>Hangzhou Danfeng Experimental Primary School</small></span></div><p>让每一份热爱，都在校园里找到回声。</p><small>© 2026 杭州市丹枫实验小学</small></footer>
 
