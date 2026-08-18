@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles.css'
 import ScrollExpand from './ScrollExpand'
@@ -31,12 +31,9 @@ const Icon = ({ name, size = 20 }: { name: string; size?: number }) => {
     clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
     pin: <><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2"/></>,
     user: <><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></>,
-    edit: <><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></>,
     close: <path d="m6 6 12 12M18 6 6 18"/>,
-    plus: <path d="M12 5v14M5 12h14"/>,
     image: <><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 15-5-5L5 20"/></>,
     phone: <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2Z"/>,
-    download: <><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></>,
     menu: <path d="M4 7h16M4 12h16M4 17h16"/>,
   }
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{paths[name]}</svg>
@@ -56,14 +53,11 @@ const starterClubs: Club[] = [
   { id: 'drama', name: '小剧场戏剧社', english: 'DRAMA CLUB', category: '音乐表演', grades: '初一 — 高二', time: '每周四 16:30 — 18:00', place: '小剧场', teacher: '苏晓 老师', summary: '在灯光亮起之前，我们练习表达，想象与共情。', description: '从即兴游戏、台词训练到舞台创作，每个人都可以是演员、编剧或舞台工作者。每学年我们会共同完成一部原创校园剧。', color: '#a74f56', photos: [art('原创校园剧', '#713d55', '#bd655d', '△'), art('舞台工作坊', '#483543', '#b88965', '◇')] },
 ]
 
-const storageKey = 'senyu-school-clubs-v1'
-const signupQrKey = 'danfeng-signup-qr-v1'
 const clubCategories = ['文艺中心', '体健中心', '科创中心'] as const
 const gradeOptions = ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级'] as const
 const categoryMap: Record<string, string> = { '艺术创作': '文艺中心', '音乐表演': '文艺中心', '体育运动': '体健中心', '科学探索': '科创中心', '文艺中心': '文艺中心', '体健中心': '体健中心', '科创中心': '科创中心' }
 const normalizeGrades = (value = '') => { const matched = gradeOptions.filter(grade => value.includes(grade)); return (matched.length ? matched : gradeOptions).join('、') }
 const normalizeClub = (club: Club): Club => ({ ...club, phone: club.phone || '', grades: normalizeGrades(club.grades), category: categoryMap[club.category] || '文艺中心' })
-const emptyClub = (): Club => ({ id: crypto.randomUUID(), name: '', english: '', category: '文艺中心', grades: '', time: '', place: '', teacher: '', phone: '', summary: '', description: '', color: '#397c6b', photos: [] })
 const categoryTheme = (category: string) => category === '文艺中心'
   ? { color: '#c76f3f', tint: 'rgba(184, 84, 36, .52)', fallback: '#e2a06b' }
   : category === '体健中心'
@@ -71,73 +65,22 @@ const categoryTheme = (category: string) => category === '文艺中心'
     : { color: '#3f6f9f', tint: 'rgba(38, 89, 145, .54)', fallback: '#79a9cd' }
 
 function App() {
-  const [clubs, setClubs] = useState<Club[]>(() => {
-    try { return (JSON.parse(localStorage.getItem(storageKey) || 'null') || starterClubs).map(normalizeClub) } catch { return starterClubs.map(normalizeClub) }
-  })
+  const clubs = useMemo(() => starterClubs.map(normalizeClub), [])
   const [selectedId, setSelectedId] = useState(clubs[0]?.id || '')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('全部社团')
   const [gradeFilter, setGradeFilter] = useState('全部年级')
-  const [editing, setEditing] = useState<Club | null>(null)
-  const [signupQr, setSignupQr] = useState(() => localStorage.getItem(signupQrKey) || '')
+  const signupQr = ''
   const [mobileNav, setMobileNav] = useState(false)
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
   const selected = clubs.find(club => club.id === selectedId) || clubs[0]
   const categories = ['全部社团', ...clubCategories]
   const filtered = useMemo(() => clubs.filter(club => (category === '全部社团' || club.category === category) && (gradeFilter === '全部年级' || club.grades.includes(gradeFilter)) && `${club.name}${club.description}`.toLowerCase().includes(query.toLowerCase())), [clubs, query, category, gradeFilter])
 
-  useEffect(() => { localStorage.setItem(storageKey, JSON.stringify(clubs)) }, [clubs])
-  useEffect(() => { signupQr ? localStorage.setItem(signupQrKey, signupQr) : localStorage.removeItem(signupQrKey) }, [signupQr])
   useEffect(() => { if (filtered.length && !filtered.some(c => c.id === selectedId)) setSelectedId(filtered[0].id) }, [filtered, selectedId])
 
-  const saveClub = (event: FormEvent) => {
-    event.preventDefault()
-    if (!editing) return
-    if (!editing.grades) return alert('请至少选择一个适合年级')
-    setClubs(current => current.some(c => c.id === editing.id) ? current.map(c => c.id === editing.id ? editing : c) : [...current, editing])
-    setSelectedId(editing.id)
-    setEditing(null)
-  }
-
-  const upload = (event: ChangeEvent<HTMLInputElement>) => {
-    if (!editing || !event.target.files) return
-    Array.from(event.target.files).slice(0, 8 - editing.photos.length).forEach(file => {
-      const reader = new FileReader()
-      reader.onload = () => setEditing(current => current ? { ...current, photos: [...current.photos, String(reader.result)] } : current)
-      reader.readAsDataURL(file)
-    })
-  }
-
-  const uploadSignupQr = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => setSignupQr(String(reader.result))
-    reader.readAsDataURL(file)
-  }
-
-  const exportPublishPackage = () => {
-    const payload = {
-      schemaVersion: 1,
-      site: '杭州市丹枫实验小学丹枫少年宫',
-      exportedAt: new Date().toISOString(),
-      instructions: '请将此文件发给 Codex，用于更新 GitHub Pages 公开网站。',
-      clubs,
-      signupQr,
-    }
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `danfeng-clubs-publish-${new Date().toISOString().slice(0, 10)}.json`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
-  }
-
   const renderClubDetail = (club: Club, extraClass = '') => <article className={`club-detail ${extraClass}`.trim()} style={{ '--club': categoryTheme(club.category).color } as React.CSSProperties}>
-    <div className="detail-cover" style={{ backgroundColor: categoryTheme(club.category).fallback, backgroundImage: `linear-gradient(180deg, ${categoryTheme(club.category).tint.replace('.52', '.12').replace('.54', '.14')} 0%, transparent 42%, ${categoryTheme(club.category).tint} 100%), url(${club.photos[0] || art(club.name, categoryTheme(club.category).color, categoryTheme(club.category).fallback)})` }}><span>{club.category}</span><button onClick={() => setEditing({ ...club, photos: [...club.photos] })}><Icon name="edit" size={16}/>编辑资料</button><div><h2>{club.name}</h2></div></div>
+    <div className="detail-cover" style={{ backgroundColor: categoryTheme(club.category).fallback, backgroundImage: `linear-gradient(180deg, ${categoryTheme(club.category).tint.replace('.52', '.12').replace('.54', '.14')} 0%, transparent 42%, ${categoryTheme(club.category).tint} 100%), url(${club.photos[0] || art(club.name, categoryTheme(club.category).color, categoryTheme(club.category).fallback)})` }}><span>{club.category}</span><div><h2>{club.name}</h2></div></div>
     <div className="fact-grid"><div><Icon name="user"/><span><small>面向年级</small><b>{club.grades}</b></span></div><div><Icon name="clock"/><span><small>上课时间</small><b>{club.time}</b></span></div><div><Icon name="pin"/><span><small>上课地点</small><b>{club.place}</b></span></div><div><Icon name="user"/><span><small>校内管理老师</small><b>{club.teacher}</b></span></div><div><Icon name="phone"/><span><small>联系电话</small><b>{club.phone || '待补充'}</b></span></div></div>
     <div className="story"><p className="kicker">ABOUT THE CLUB</p><h3>关于我们</h3><p>{club.description}</p></div>
     <div className="gallery-heading"><div><p className="kicker">CLUB MOMENTS</p><h3>社团瞬间</h3></div><span>{club.photos.length} 张照片</span></div>
@@ -152,7 +95,6 @@ function App() {
         <a href="#about" onClick={() => setMobileNav(false)}>关于社团</a>
         <a href="#join" onClick={() => setMobileNav(false)}>加入指南</a>
       </nav>
-      <button className="manage-button" onClick={() => setEditing(selected ? { ...selected, photos: [...selected.photos] } : emptyClub())}><Icon name="edit" size={17}/><span>内容管理</span></button>
       <button className="menu-button" onClick={() => setMobileNav(!mobileNav)} aria-label="菜单"><Icon name={mobileNav ? 'close' : 'menu'}/></button>
     </header>
 
@@ -186,37 +128,13 @@ function App() {
         </div>
       </section>
 
-      <section className="join" id="join"><p className="kicker">START YOUR JOURNEY</p><h2>准备好开始你的<br/>社团旅程了吗？</h2><p>记下喜欢的社团，请扫码报名吧。</p><div className={`signup-qr${signupQr ? ' has-image' : ''}`}>{signupQr ? <img src={signupQr} alt="社团报名二维码"/> : <span><Icon name="image" size={24}/><b>报名二维码</b><small>请在内容管理中上传</small></span>}</div><a href="#clubs">回到社团导览 <Icon name="arrow" size={17}/></a></section>
+      <section className="join" id="join"><p className="kicker">START YOUR JOURNEY</p><h2>准备好开始你的<br/>社团旅程了吗？</h2><p>记下喜欢的社团，请扫码报名吧。</p><div className={`signup-qr${signupQr ? ' has-image' : ''}`}>{signupQr ? <img src={signupQr} alt="社团报名二维码"/> : <span><Icon name="image" size={24}/><b>报名二维码</b><small>待资料统一发布</small></span>}</div><a href="#clubs">回到社团导览 <Icon name="arrow" size={17}/></a></section>
     </main>
 
     {mobileDetailOpen && selected && <div className="mobile-detail-overlay" role="dialog" aria-modal="true" aria-label={`${selected.name}详情`}><button className="mobile-detail-close" onClick={() => setMobileDetailOpen(false)}><Icon name="close"/>返回社团列表</button>{renderClubDetail(selected, 'mobile-club-detail')}</div>}
 
     <footer><div className="brand"><img className="brand-mark" src={schoolLogoImage} alt=""/><span className="brand-copy"><strong>杭州市丹枫实验小学</strong><small>Hangzhou Danfeng Experimental Primary School</small></span></div><p>让每一份热爱，都在校园里找到回声。</p><small>© 2026 杭州市丹枫实验小学</small></footer>
 
-    {editing && <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && setEditing(null)}>
-      <form className="editor" onSubmit={saveClub}>
-        <div className="editor-head"><div><p className="kicker">CONTENT MANAGER</p><h2>{clubs.some(c => c.id === editing.id) ? '编辑社团资料' : '新增社团'}</h2></div><button type="button" onClick={() => setEditing(null)}><Icon name="close"/></button></div>
-        <div className="form-grid">
-          <label><span>社团名称</span><input required value={editing.name} onChange={e => setEditing({...editing, name: e.target.value})}/></label>
-          <label><span>社团分类</span><select required value={editing.category} onChange={e => setEditing({...editing, category: e.target.value})}>{clubCategories.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
-          <fieldset className="grade-picker"><legend>面向年级（可多选）</legend>{gradeOptions.map(grade => { const checked = editing.grades.split('、').includes(grade); return <label key={grade} className={checked ? 'checked' : ''}><input type="checkbox" checked={checked} onChange={() => { const current = editing.grades.split('、').filter(Boolean); const next = checked ? current.filter(item => item !== grade) : [...current, grade]; setEditing({...editing, grades: gradeOptions.filter(item => next.includes(item)).join('、')}) }}/><span>{grade}</span></label> })}</fieldset>
-          <label><span>上课时间</span><input required value={editing.time} onChange={e => setEditing({...editing, time: e.target.value})}/></label>
-          <label><span>上课地点</span><input required value={editing.place} onChange={e => setEditing({...editing, place: e.target.value})}/></label>
-          <label><span>校内管理老师</span><input required value={editing.teacher} onChange={e => setEditing({...editing, teacher: e.target.value})}/></label>
-          <label><span>联系电话</span><input type="tel" value={editing.phone || ''} onChange={e => setEditing({...editing, phone: e.target.value})}/></label>
-          <label><span>主题颜色</span><input type="color" value={editing.color} onChange={e => setEditing({...editing, color: e.target.value})}/></label>
-          <label className="wide"><span>社团介绍</span><textarea required rows={5} value={editing.description} onChange={e => setEditing({...editing, description: e.target.value})}/></label>
-        </div>
-        <div className="photo-editor"><div><b>社团活动照片</b><small>最多 8 张，第 1 张将作为封面图。图片会保存在当前浏览器中。</small></div><label className="upload"><Icon name="image"/>上传照片<input type="file" accept="image/*" multiple onChange={upload}/></label></div>
-        <div className="photo-strip">{editing.photos.map((photo, index) => <div key={`${photo.slice(-16)}${index}`}><img src={photo} alt=""/><button type="button" onClick={() => setEditing({...editing, photos: editing.photos.filter((_, i) => i !== index)})}><Icon name="close" size={15}/></button></div>)}</div>
-        <div className="signup-editor"><div><b>报名二维码</b><small>用于页面底部的扫码报名区域，建议上传正方形图片。</small></div>{signupQr && <img src={signupQr} alt="当前报名二维码"/>}<label className="upload"><Icon name="image"/>{signupQr ? '替换图片' : '上传图片'}<input type="file" accept="image/*" onChange={uploadSignupQr}/></label>{signupQr && <button type="button" className="remove-qr" onClick={() => setSignupQr('')}>移除</button>}</div>
-        <div className="publish-export"><span className="publish-export-icon"><Icon name="download" size={24}/></span><div><b>完成编辑后，导出发布包</b><small>文件会包含全部社团资料、照片和报名二维码。导出后将 JSON 文件发给 Codex 即可发布。</small></div><button type="button" onClick={exportPublishPackage}><Icon name="download" size={17}/>导出发布包</button></div>
-        <div className="editor-actions">
-          {clubs.some(c => c.id === editing.id) && <button type="button" className="delete" onClick={() => { if (confirm('确定删除这个社团吗？')) { const next = clubs.filter(c => c.id !== editing.id); setClubs(next); setSelectedId(next[0]?.id || ''); setEditing(null) } }}>删除社团</button>}
-          <button type="button" className="new" onClick={() => setEditing(emptyClub())}><Icon name="plus" size={17}/>新增社团</button><button type="submit" className="save">保存并发布</button>
-        </div>
-      </form>
-    </div>}
   </div>
 }
 
